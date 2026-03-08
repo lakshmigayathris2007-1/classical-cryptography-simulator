@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classical Cryptography Simulator</title>
+<style>
+  :root {
+    --font-mono: 'Courier New', 'Lucida Console', Courier, monospace;
+    --font-display: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --surface3: #1f2d42;
+    --border: #2a3a55;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #a78bfa;
+    --accent4: #34d399;
+    --text: #e2e8f0;
+    --text-dim: #7a8fa6;
+    --highlight: #ff6b35;
+    --glow: rgba(0,212,255,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: 
+      radial-gradient(ellipse at 10% 20%, rgba(0,212,255,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(167,139,250,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255,107,53,0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    padding: 40px 0 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .logo-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent3) 50%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  /* CIPHER SELECTOR */
+  .cipher-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+
+  .cipher-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .cipher-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--glow);
+  }
+
+  .cipher-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  .category-label {
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: -2px;
+  }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* PANELS */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+
+  .panel-icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .panel-body { padding: 20px; }
+
+  /* INPUTS */
+  .field-group { margin-bottom: 16px; }
+
+  .field-label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .field-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  .field-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  .field-input::placeholder { color: var(--text-dim); opacity: 0.6; }
+
+  /* MATRIX GRID */
+  .matrix-grid {
+    display: inline-grid;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .matrix-cell {
+    width: 52px; height: 40px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+
+  .matrix-cell:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .matrix-size-btns {
+    display: flex; gap: 8px; margin-bottom: 10px;
+  }
+
+  .size-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .size-btn.active {
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  /* ACTION BUTTONS */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 20px rgba(0,212,255,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--accent2);
+    color: var(--bg);
+    border-color: var(--accent2);
+  }
+
+  .btn-secondary:hover {
+    box-shadow: 0 0 20px rgba(255,107,53,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border-color: var(--border);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--text-dim);
+    color: var(--text);
+  }
+
+  .btn-purple {
+    background: var(--accent3);
+    color: var(--bg);
+    border-color: var(--accent3);
+  }
+
+  /* OUTPUT */
+  .output-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+
+  .output-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .output-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    word-break: break-all;
+    letter-spacing: 2px;
+  }
+
+  .output-text.decrypt { color: var(--accent4); }
+
+  /* ERROR */
+  .error-box {
+    background: rgba(255,77,77,0.1);
+    border: 1px solid rgba(255,77,77,0.4);
+    color: #ff6b6b;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-top: 10px;
+    display: none;
+  }
+
+  .error-box.visible { display: block; }
+
+  /* VISUALIZATION PANEL */
+  .viz-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .step-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .step-btn {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .step-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .step-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .step-counter {
+    font-size: 12px;
+    color: var(--text-dim);
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .autoplay-btn {
+    background: var(--accent3);
+    border-color: var(--accent3);
+    color: var(--bg);
+    padding: 0 16px;
+    width: auto;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .autoplay-btn.playing { background: var(--accent2); border-color: var(--accent2); }
+
+  .step-label {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 12px 20px;
+    background: var(--glow);
+    border-bottom: 1px solid rgba(0,212,255,0.2);
+  }
+
+  .step-content {
+    padding: 20px;
+    min-height: 250px;
+    transition: opacity 0.3s;
+  }
+
+  .step-content.fade { opacity: 0.3; }
+
+  /* VISUALIZATION ELEMENTS */
+  .viz-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 10px 0;
+  }
+
+  .viz-table th {
+    background: var(--surface3);
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .viz-table td {
+    padding: 8px 6px;
+    text-align: center;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-weight: 700;
+    font-size: 13px;
+    transition: all 0.3s;
+  }
+
+  .viz-table td.active {
+    background: var(--accent);
+    color: var(--bg);
+    transform: scale(1.1);
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 0 15px rgba(0,212,255,0.4);
+  }
+
+  .viz-table td.active2 {
+    background: var(--accent2);
+    color: var(--bg);
+  }
+
+  .viz-table td.highlighted {
+    background: rgba(0,212,255,0.15);
+    color: var(--accent);
+  }
+
+  /* Playfair matrix */
+  .playfair-grid {
+    display: inline-grid;
+    grid-template-columns: repeat(5, 44px);
+    gap: 4px;
+    margin: 10px 0;
+  }
+
+  .pf-cell {
+    width: 44px; height: 44px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .pf-cell.active {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 15px rgba(0,212,255,0.5);
+    transform: scale(1.1);
+  }
+
+  .pf-cell.active2 {
+    background: var(--accent2);
+    color: var(--bg);
+    box-shadow: 0 0 15px rgba(255,107,53,0.5);
+    transform: scale(1.1);
+  }
+
+  .pf-cell.pair {
+    background: rgba(167,139,250,0.25);
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  /* Rail fence */
+  .rail-grid {
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+
+  .rail-row {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .rail-cell {
+    width: 28px; height: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+
+  .rail-cell.active { background: var(--accent); color: var(--bg); }
+  .rail-cell.r0 { border-color: rgba(0,212,255,0.4); background: rgba(0,212,255,0.08); color: var(--accent); }
+  .rail-cell.r1 { border-color: rgba(255,107,53,0.4); background: rgba(255,107,53,0.08); color: var(--accent2); }
+  .rail-cell.r2 { border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.08); color: var(--accent3); }
+  .rail-cell.r3 { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.08); color: var(--accent4); }
+  .rail-cell.empty { opacity: 0.2; }
+
+  /* Letter number row */
+  .letter-num-row {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+  }
+
+  .ln-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .ln-letter {
+    width: 26px; height: 26px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .ln-num {
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .ln-item.active .ln-letter {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 10px rgba(0,212,255,0.4);
+  }
+
+  .ln-item.active .ln-num { color: var(--accent); }
+
+  /* Vigenere table */
+  .vig-table-wrap {
+    overflow: auto;
+    max-height: 280px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .vig-table {
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .vig-table td, .vig-table th {
+    width: 22px; height: 22px;
+    border: 1px solid rgba(42,58,85,0.5);
+    text-align: center;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .vig-table th {
+    background: var(--surface3);
+    color: var(--text-dim);
+    font-size: 9px;
+    position: sticky;
+    top: 0;
+  }
+
+  .vig-table .row-header {
+    background: var(--surface3);
+    color: var(--text-dim);
+    position: sticky;
+    left: 0;
+  }
+
+  .vig-table td { background: var(--surface2); }
+  .vig-table td.vig-row { background: rgba(0,212,255,0.08); }
+  .vig-table td.vig-col { background: rgba(255,107,53,0.08); }
+  .vig-table td.vig-active { background: var(--accent); color: var(--bg); }
+
+  /* Key display row */
+  .key-row-display {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+  }
+
+  .kr-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .kr-plain {
+    width: 26px; height: 26px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px 4px 0 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .kr-key {
+    width: 26px; height: 26px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 0 0 4px 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    color: var(--accent2);
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .kr-item.active .kr-plain { background: var(--accent); color: var(--bg); }
+  .kr-item.active .kr-key { background: var(--accent2); color: var(--bg); }
+
+  /* Digraph display */
+  .digraph-display {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+  }
+
+  .digraph-pair {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    transition: all 0.3s;
+  }
+
+  .digraph-pair.active {
+    background: rgba(167,139,250,0.2);
+    border-color: var(--accent3);
+    color: var(--accent3);
+    box-shadow: 0 0 12px rgba(167,139,250,0.3);
+  }
+
+  /* Columnar grid */
+  .col-grid {
+    display: inline-grid;
+    gap: 4px;
+    margin: 10px 0;
+  }
+
+  .col-cell {
+    width: 36px; height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .col-cell.header {
+    background: var(--surface3);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .col-cell.active-col {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+  }
+
+  .col-cell.reading {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 10px rgba(0,212,255,0.3);
+  }
+
+  /* Info badges */
+  .info-badge {
+    display: inline-block;
+    background: rgba(167,139,250,0.15);
+    border: 1px solid rgba(167,139,250,0.3);
+    color: var(--accent3);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    margin: 4px 2px;
+  }
+
+  .info-badge.green {
+    background: rgba(52,211,153,0.1);
+    border-color: rgba(52,211,153,0.3);
+    color: var(--accent4);
+  }
+
+  .info-badge.orange {
+    background: rgba(255,107,53,0.1);
+    border-color: rgba(255,107,53,0.3);
+    color: var(--accent2);
+  }
+
+  /* Matrix mult display */
+  .matrix-mul-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+
+  .mini-matrix {
+    display: inline-grid;
+    gap: 4px;
+    border: 2px solid var(--border);
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  .mini-matrix-cell {
+    width: 36px; height: 28px;
+    background: var(--surface2);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .mini-matrix-cell.highlight { background: var(--accent); color: var(--bg); }
+  .mini-matrix-cell.highlight2 { background: var(--accent2); color: var(--bg); }
+
+  .op-symbol { color: var(--text-dim); font-size: 20px; }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0 20px 0;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-text {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  /* Scrollable step content for long viz */
+  .step-scroll { overflow-y: auto; max-height: 500px; }
+
+  /* OTP key display */
+  .otp-key-display {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent2);
+    word-break: break-all;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    margin: 6px 0;
+    letter-spacing: 2px;
+  }
+
+  /* Monosub table */
+  .mono-table-wrap { overflow-x: auto; }
+
+  /* Cipher description badge */
+  .cipher-desc {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .btn-row { flex-direction: column; }
+    .playfair-grid { grid-template-columns: repeat(5, 36px); }
+    .pf-cell { width: 36px; height: 36px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-badge"><div class="logo-dot"></div> Cryptography Lab</div>
+    <h1>Classical Cryptography<br>Simulator</h1>
+    <p class="subtitle">Interactive Step-by-Step Cipher Visualization</p>
+  </header>
+
+  <div class="cipher-selector">
+    <div class="category-label">— Substitution Ciphers —</div>
+    <button class="cipher-btn active" onclick="selectCipher('caesar')">Caesar</button>
+    <button class="cipher-btn" onclick="selectCipher('mono')">Monoalphabetic</button>
+    <button class="cipher-btn" onclick="selectCipher('playfair')">Playfair</button>
+    <button class="cipher-btn" onclick="selectCipher('hill')">Hill</button>
+    <button class="cipher-btn" onclick="selectCipher('vigenere')">Vigenère</button>
+    <button class="cipher-btn" onclick="selectCipher('otp')">One-Time Pad</button>
+    <div class="category-label" style="margin-top:8px">— Transposition Ciphers —</div>
+    <button class="cipher-btn" onclick="selectCipher('railfence')">Rail Fence</button>
+    <button class="cipher-btn" onclick="selectCipher('columnar')">Columnar</button>
+  </div>
+
+  <div class="main-grid">
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-icon" style="background:rgba(0,212,255,0.15)">🔑</div>
+        <span class="panel-title" id="cipher-name">Caesar Cipher</span>
+      </div>
+      <div class="panel-body">
+        <div class="cipher-desc" id="cipher-desc">Shifts each letter in the plaintext by a fixed number of positions in the alphabet.</div>
+        <div id="cipher-inputs"></div>
+        <div class="error-box" id="error-box"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="doEncrypt()">Encrypt →</button>
+          <button class="btn btn-secondary" onclick="doDecrypt()">← Decrypt</button>
+          <button class="btn btn-ghost" onclick="doReset()">Reset</button>
+        </div>
+        <div id="output-section"></div>
+      </div>
+    </div>
+
+    <!-- VISUALIZATION PANEL -->
+    <div class="panel viz-panel">
+      <div class="panel-header">
+        <div class="panel-icon" style="background:rgba(167,139,250,0.15)">📊</div>
+        <span class="panel-title">Step-by-Step Visualization</span>
+      </div>
+      <div class="step-controls">
+        <button class="step-btn" id="btn-first" onclick="goStep(0)" title="First">⏮</button>
+        <button class="step-btn" id="btn-prev" onclick="prevStep()" title="Previous">◀</button>
+        <span class="step-counter" id="step-counter">— / —</span>
+        <button class="step-btn" id="btn-next" onclick="nextStep()" title="Next">▶</button>
+        <button class="step-btn" id="btn-last" onclick="goStep(steps.length-1)" title="Last">⏭</button>
+        <button class="step-btn autoplay-btn" id="btn-auto" onclick="toggleAutoplay()">▶ Auto</button>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div id="step-label" class="step-label">Select a cipher and click Encrypt to begin</div>
+      <div class="step-content step-scroll" id="step-content">
+        <div class="empty-state">
+          <div class="empty-icon">🔐</div>
+          <div class="empty-text">No visualization yet.<br>Enter your plaintext and key,<br>then click Encrypt.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentCipher = 'caesar';
+let steps = [];
+let currentStep = 0;
+let autoplayTimer = null;
+let hillSize = 2;
+
+// ============================================================
+// CIPHER DEFINITIONS
+// ============================================================
+const CIPHERS = {
+  caesar: { name: 'Caesar Cipher', desc: 'Shifts each letter in the plaintext by a fixed number of positions in the alphabet.' },
+  mono:   { name: 'Monoalphabetic Cipher', desc: 'Replaces each letter with a fixed corresponding letter from a custom 26-letter key.' },
+  playfair:{ name: 'Playfair Cipher', desc: 'Encrypts pairs of letters (digraphs) using a 5×5 grid built from a keyword.' },
+  hill:   { name: 'Hill Cipher', desc: 'Uses matrix multiplication modulo 26 to encrypt blocks of letters.' },
+  vigenere:{ name: 'Vigenère Cipher', desc: 'Uses a repeating keyword to shift each letter, creating a polyalphabetic cipher.' },
+  otp:    { name: 'One-Time Pad', desc: 'Encrypts each letter with a unique random key character. Theoretically unbreakable when used correctly.' },
+  railfence:{ name: 'Rail Fence Cipher', desc: 'Writes plaintext in a zig-zag pattern across a number of rails, then reads row by row.' },
+  columnar:{ name: 'Columnar Transposition', desc: 'Arranges plaintext into columns determined by a keyword, then reads columns in alphabetical key order.' },
+};
+
+const CIPHER_INPUTS = {
+  caesar: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">Hello World</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Shift Key (1–25)</label>
+      <input class="field-input" id="in-shift" type="number" min="1" max="25" value="3" placeholder="3">
+    </div>`,
+  mono: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">Hello World</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Substitution Key (26 unique letters A-Z)</label>
+      <input class="field-input" id="in-monokey" type="text" maxlength="26" placeholder="QWERTYUIOPASDFGHJKLZXCVBNM" value="QWERTYUIOPASDFGHJKLZXCVBNM">
+    </div>`,
+  playfair: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">Hide the gold</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Keyword</label>
+      <input class="field-input" id="in-keyword" type="text" placeholder="MONARCHY" value="MONARCHY">
+    </div>`,
+  hill: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">ACT</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Matrix Size</label>
+      <div class="matrix-size-btns">
+        <button class="size-btn active" id="size2" onclick="setHillSize(2)">2×2</button>
+        <button class="size-btn" id="size3" onclick="setHillSize(3)">3×3</button>
+      </div>
+      <label class="field-label">Key Matrix</label>
+      <div id="hill-matrix-wrap"></div>
+    </div>`,
+  vigenere: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">Attack at dawn</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Keyword</label>
+      <input class="field-input" id="in-keyword" type="text" placeholder="LEMON" value="LEMON">
+    </div>`,
+  otp: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">Hello</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">One-Time Key (auto-generated)</label>
+      <div class="otp-key-display" id="otp-key-display">—</div>
+      <button class="btn btn-ghost" style="margin-top:8px;flex:none;width:auto;padding:6px 16px" onclick="generateOTPKey()">↻ Regenerate Key</button>
+    </div>`,
+  railfence: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">WEAREDISCOVERED</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Number of Rails (2–6)</label>
+      <input class="field-input" id="in-rails" type="number" min="2" max="6" value="3" placeholder="3">
+    </div>`,
+  columnar: `
+    <div class="field-group">
+      <label class="field-label">Plaintext</label>
+      <textarea class="field-input" id="in-plaintext" rows="3" placeholder="Enter your message...">WEAREDISCOVERED</textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Keyword</label>
+      <input class="field-input" id="in-keyword" type="text" placeholder="ZEBRAS" value="ZEBRAS">
+    </div>`,
+};
+
+// ============================================================
+// UI SETUP
+// ============================================================
+function selectCipher(name) {
+  currentCipher = name;
+  document.querySelectorAll('.cipher-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('cipher-name').textContent = CIPHERS[name].name;
+  document.getElementById('cipher-desc').textContent = CIPHERS[name].desc;
+  document.getElementById('cipher-inputs').innerHTML = CIPHER_INPUTS[name];
+  document.getElementById('output-section').innerHTML = '';
+  document.getElementById('error-box').classList.remove('visible');
+  resetViz();
+  if (name === 'hill') { hillSize = 2; renderHillMatrix(); }
+  if (name === 'otp') generateOTPKey();
+}
+
+function setHillSize(n) {
+  hillSize = n;
+  document.getElementById('size2').classList.toggle('active', n===2);
+  document.getElementById('size3').classList.toggle('active', n===3);
+  renderHillMatrix();
+}
+
+function renderHillMatrix() {
+  const defaults2 = [[6,24],[1,13]];
+  const defaults3 = [[6,24,1],[13,16,10],[20,17,15]];
+  const d = hillSize === 2 ? defaults2 : defaults3;
+  const wrap = document.getElementById('hill-matrix-wrap');
+  if (!wrap) return;
+  let html = `<div class="matrix-grid" style="grid-template-columns:repeat(${hillSize},52px)">`;
+  for (let r = 0; r < hillSize; r++)
+    for (let c = 0; c < hillSize; c++)
+      html += `<input class="matrix-cell" id="m${r}_${c}" type="number" value="${d[r][c]}" min="0" max="25">`;
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function getHillMatrix() {
+  let m = [];
+  for (let r = 0; r < hillSize; r++) {
+    let row = [];
+    for (let c = 0; c < hillSize; c++) {
+      let v = parseInt(document.getElementById(`m${r}_${c}`).value);
+      if (isNaN(v)) return null;
+      row.push(((v % 26) + 26) % 26);
+    }
+    m.push(row);
+  }
+  return m;
+}
+
+let otpKey = '';
+function generateOTPKey() {
+  const pt = (document.getElementById('in-plaintext')?.value || 'hello').replace(/[^a-zA-Z]/g,'');
+  const len = Math.max(pt.length, 5);
+  otpKey = Array.from({length:len}, ()=>String.fromCharCode(65+Math.floor(Math.random()*26))).join('');
+  const el = document.getElementById('otp-key-display');
+  if (el) el.textContent = otpKey;
+}
+
+function doReset() {
+  document.getElementById('cipher-inputs').innerHTML = CIPHER_INPUTS[currentCipher];
+  document.getElementById('output-section').innerHTML = '';
+  document.getElementById('error-box').classList.remove('visible');
+  resetViz();
+  if (currentCipher === 'hill') renderHillMatrix();
+  if (currentCipher === 'otp') generateOTPKey();
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function clearError() { document.getElementById('error-box').classList.remove('visible'); }
+
+function showOutput(cipher, decrypt) {
+  document.getElementById('output-section').innerHTML = `
+    <div class="output-box">
+      <div class="output-label">Ciphertext</div>
+      <div class="output-text">${cipher}</div>
+    </div>
+    <div class="output-box">
+      <div class="output-label">Decrypted</div>
+      <div class="output-text decrypt">${decrypt}</div>
+    </div>`;
+}
+
+// ============================================================
+// VISUALIZATION ENGINE
+// ============================================================
+function resetViz() {
+  steps = []; currentStep = 0;
+  stopAutoplay();
+  document.getElementById('step-label').textContent = 'Select a cipher and click Encrypt to begin';
+  document.getElementById('step-content').innerHTML = `<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-text">No visualization yet.<br>Enter your plaintext and key,<br>then click Encrypt.</div></div>`;
+  document.getElementById('step-counter').textContent = '— / —';
+  document.getElementById('progress-fill').style.width = '0%';
+  updateStepBtns();
+}
+
+function setSteps(arr) {
+  steps = arr; currentStep = 0;
+  renderStep();
+}
+
+function renderStep() {
+  if (!steps.length) return;
+  const s = steps[currentStep];
+  const label = document.getElementById('step-label');
+  const content = document.getElementById('step-content');
+  content.classList.add('fade');
+  setTimeout(() => {
+    label.textContent = `Step ${currentStep+1}: ${s.title}`;
+    content.innerHTML = s.html;
+    content.classList.remove('fade');
+  }, 150);
+  document.getElementById('step-counter').textContent = `${currentStep+1} / ${steps.length}`;
+  document.getElementById('progress-fill').style.width = `${((currentStep+1)/steps.length)*100}%`;
+  updateStepBtns();
+}
+
+function goStep(n) { if(n>=0&&n<steps.length){currentStep=n;renderStep();} }
+function nextStep() { if(currentStep<steps.length-1){currentStep++;renderStep();} }
+function prevStep() { if(currentStep>0){currentStep--;renderStep();} }
+
+function updateStepBtns() {
+  document.getElementById('btn-first').disabled = currentStep===0||!steps.length;
+  document.getElementById('btn-prev').disabled = currentStep===0||!steps.length;
+  document.getElementById('btn-next').disabled = currentStep>=steps.length-1||!steps.length;
+  document.getElementById('btn-last').disabled = currentStep>=steps.length-1||!steps.length;
+}
+
+function toggleAutoplay() {
+  if (autoplayTimer) { stopAutoplay(); }
+  else {
+    const btn = document.getElementById('btn-auto');
+    btn.textContent = '⏸ Stop'; btn.classList.add('playing');
+    autoplayTimer = setInterval(()=>{
+      if(currentStep<steps.length-1){nextStep();}
+      else{stopAutoplay();}
+    }, 1200);
+  }
+}
+
+function stopAutoplay() {
+  clearInterval(autoplayTimer); autoplayTimer = null;
+  const btn = document.getElementById('btn-auto');
+  btn.textContent = '▶ Auto'; btn.classList.remove('playing');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const mod26 = n => ((n % 26) + 26) % 26;
+const l2n = c => c.toUpperCase().charCodeAt(0) - 65;
+const n2l = n => String.fromCharCode(65 + mod26(n));
+
+function hlt(ch, cls='active') { return `<span style="display:inline-block;padding:2px 5px;border-radius:3px;font-weight:700" class="${cls}-span" data-cls="${cls}">${ch}</span>`; }
+
+function colorLetter(ch, cls) {
+  const colors = { active:'var(--accent)', active2:'var(--accent2)', active3:'var(--accent3)', active4:'var(--accent4)' };
+  return `<span style="color:${colors[cls]||colors.active};font-weight:700">${ch}</span>`;
+}
+
+// ============================================================
+// CAESAR CIPHER
+// ============================================================
+function caesarEncrypt(text, shift) {
+  return text.toUpperCase().split('').map(c => alpha.includes(c) ? n2l(l2n(c)+shift) : c).join('');
+}
+function caesarDecrypt(text, shift) {
+  return caesarEncrypt(text, 26-shift);
+}
+
+function buildCaesarSteps(plaintext, shift, mode='encrypt') {
+  const pt = plaintext.toUpperCase();
+  const letters = pt.split('').filter(c=>alpha.includes(c));
+  const result = mode==='encrypt' ? caesarEncrypt(pt,shift) : caesarDecrypt(pt,shift);
+  const s = [];
+
+  // Step 1: Alphabet mapping table
+  let tableHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Each letter maps to another letter ${shift} position(s) ahead in the alphabet.</p>`;
+  tableHTML += '<div style="overflow-x:auto"><table class="viz-table"><tr>';
+  alpha.split('').forEach(c=>tableHTML+=`<th>${c}</th>`);
+  tableHTML += '</tr><tr>';
+  alpha.split('').forEach(c=>tableHTML+=`<td>${n2l(l2n(c)+shift)}</td>`);
+  tableHTML += '</tr></table></div>';
+  s.push({title:`Alphabet Mapping (shift=${shift})`,html:tableHTML});
+
+  // Step 2: Full transformation display
+  let fullHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Applying shift of ${shift} to each letter:</p>`;
+  fullHTML += '<div class="letter-num-row">';
+  const ct = mode==='encrypt'?caesarEncrypt(pt,shift):caesarDecrypt(pt,shift);
+  ct.split('').forEach((c,i)=>{
+    const orig = pt[i];
+    if(!alpha.includes(orig)){
+      fullHTML+=`<div class="ln-item"><div class="ln-letter">${orig}</div><div class="ln-num">skip</div></div>`;
+    } else {
+      const fromN = l2n(orig), toN = mod26(fromN+(mode==='encrypt'?shift:26-shift));
+      fullHTML+=`<div class="ln-item"><div class="ln-letter">${orig}</div><div class="ln-num">${fromN}→${toN}</div></div>`;
+    }
+  });
+  fullHTML += '</div>';
+  fullHTML += `<div style="margin-top:16px"><div class="output-label">Result</div><div class="output-text" style="margin-top:6px">${ct}</div></div>`;
+  s.push({title:'Apply Shift to Each Letter',html:fullHTML});
+
+  // Step 3+: per-letter highlight in table
+  letters.forEach((c,i)=>{
+    const fi = l2n(c), ti = mod26(fi+(mode==='encrypt'?shift:26-shift));
+    let html = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Letter <strong style="color:var(--accent)">${c}</strong> (position ${fi}) → position ${ti} = <strong style="color:var(--accent2)">${n2l(ti)}</strong></p>`;
+    html += '<div style="overflow-x:auto"><table class="viz-table"><tr>';
+    alpha.split('').forEach((a,j)=>html+=`<th class="${j===fi?'active-th':''}">  ${a}</th>`);
+    html += '</tr><tr>';
+    alpha.split('').forEach((_,j)=>{
+      const mapped = n2l(j+(mode==='encrypt'?shift:26-shift));
+      html+=`<td class="${j===fi?'active':j===ti?'active2':''}">${mapped}</td>`;
+    });
+    html += '</tr></table></div>';
+    html += `<div class="info-badge" style="margin-top:10px">${c} (${fi}) + ${mode==='encrypt'?shift:26-shift} = ${ti} mod 26 = ${n2l(ti)}</div>`;
+    s.push({title:`Encrypt letter "${c}" → "${n2l(ti)}"`, html});
+  });
+
+  // Final step
+  s.push({title:'Final Result',html:`
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Encryption complete.</p>
+    <div class="output-box"><div class="output-label">Plaintext</div><div class="output-text" style="color:var(--text)">${pt}</div></div>
+    <div class="output-box"><div class="output-label">Ciphertext</div><div class="output-text">${result}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// MONOALPHABETIC CIPHER
+// ============================================================
+function monoEncrypt(text, key) {
+  return text.toUpperCase().split('').map(c=>alpha.includes(c)?key[l2n(c)]:c).join('');
+}
+function monoDecrypt(text, key) {
+  return text.toUpperCase().split('').map(c=>{
+    const i=key.indexOf(c); return i>=0?alpha[i]:c;
+  }).join('');
+}
+
+function buildMonoSteps(pt, key, mode) {
+  pt = pt.toUpperCase(); key = key.toUpperCase();
+  const s = [];
+  const enc = mode==='encrypt'?monoEncrypt(pt,key):monoDecrypt(pt,key);
+
+  // Step 1: substitution table
+  let html = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Full substitution alphabet:</p><div style="overflow-x:auto"><table class="viz-table"><tr>';
+  alpha.split('').forEach(c=>html+=`<th>${c}</th>`);
+  html += '</tr><tr>';
+  key.split('').forEach(c=>html+=`<td>${c}</td>`);
+  html += '</tr></table></div>';
+  s.push({title:'Substitution Table (Plaintext → Ciphertext)', html});
+
+  // Per-letter
+  const letters = pt.split('').filter(c=>alpha.includes(c));
+  letters.forEach((c,i)=>{
+    const fi = l2n(c);
+    const toC = mode==='encrypt'?key[fi]:alpha[key.indexOf(c)];
+    let html2 = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:8px"><strong style="color:var(--accent)">${c}</strong> → <strong style="color:var(--accent2)">${toC}</strong></p>`;
+    html2 += '<div style="overflow-x:auto"><table class="viz-table"><tr>';
+    alpha.split('').forEach((a,j)=>html2+=`<th ${j===fi?'style="color:var(--accent)"':''}>${a}</th>`);
+    html2 += '</tr><tr>';
+    key.split('').forEach((k,j)=>html2+=`<td class="${j===fi?'active':''}">${k}</td>`);
+    html2 += '</tr></table></div>';
+    s.push({title:`${mode==='encrypt'?'Encrypt':'Decrypt'} "${c}" → "${toC}"`, html:html2});
+  });
+
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Input</div><div class="output-text" style="color:var(--text)">${pt}</div></div>
+    <div class="output-box"><div class="output-label">Output</div><div class="output-text">${enc}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// PLAYFAIR CIPHER
+// ============================================================
+function buildPlayfairMatrix(keyword) {
+  keyword = keyword.toUpperCase().replace(/J/g,'I').replace(/[^A-Z]/g,'');
+  let used = new Set(), matrix = [];
+  for (let c of keyword) { if(!used.has(c)){used.add(c);matrix.push(c);} }
+  for (let c of alpha) { if(c!=='J'&&!used.has(c)){used.add(c);matrix.push(c);} }
+  return matrix;
+}
+
+function findInMatrix(matrix, ch) {
+  const i = matrix.indexOf(ch==='J'?'I':ch);
+  return [Math.floor(i/5), i%5];
+}
+
+function playfairEncryptPair(matrix, a, b) {
+  const [ra,ca] = findInMatrix(matrix,a), [rb,cb] = findInMatrix(matrix,b);
+  if (ra===rb) return [matrix[ra*5+((ca+1)%5)], matrix[rb*5+((cb+1)%5)]];
+  if (ca===cb) return [matrix[((ra+1)%5)*5+ca], matrix[((rb+1)%5)*5+cb]];
+  return [matrix[ra*5+cb], matrix[rb*5+ca]];
+}
+
+function playfairDecryptPair(matrix, a, b) {
+  const [ra,ca] = findInMatrix(matrix,a), [rb,cb] = findInMatrix(matrix,b);
+  if (ra===rb) return [matrix[ra*5+((ca+24)%5)], matrix[rb*5+((cb+24)%5)]];
+  if (ca===cb) return [matrix[((ra+4)%5)*5+ca], matrix[((rb+4)%5)*5+cb]];
+  return [matrix[ra*5+cb], matrix[rb*5+ca]];
+}
+
+function playfairPrepare(text) {
+  text = text.toUpperCase().replace(/J/g,'I').replace(/[^A-Z]/g,'');
+  let out = [];
+  let i = 0;
+  while (i<text.length) {
+    let a = text[i++];
+    if (i>=text.length) { out.push([a,'X']); break; }
+    let b = text[i];
+    if (a===b) { out.push([a,'X']); }
+    else { out.push([a,b]); i++; }
+  }
+  return out;
+}
+
+function buildPlayfairSteps(pt, keyword, mode) {
+  const matrix = buildPlayfairMatrix(keyword);
+  const pairs = playfairPrepare(pt);
+  const s = [];
+
+  // Step 1: Matrix
+  let matHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">5×5 grid built from keyword "<strong style="color:var(--accent)">${keyword.toUpperCase()}</strong>" (I/J combined):</p>`;
+  matHTML += '<div class="playfair-grid">';
+  matrix.forEach(c=>matHTML+=`<div class="pf-cell">${c}</div>`);
+  matHTML += '</div>';
+  s.push({title:`Build 5×5 Playfair Matrix`, html:matHTML});
+
+  // Step 2: Digraph pairs
+  let dgHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Plaintext split into digraph pairs (X inserted for doubles/padding):</p><div class="digraph-display">`;
+  pairs.forEach(([a,b])=>dgHTML+=`<div class="digraph-pair">${a}${b}</div>`);
+  dgHTML += '</div>';
+  s.push({title:'Split Plaintext into Digraph Pairs', html:dgHTML});
+
+  // Per-pair steps
+  let result = '';
+  pairs.forEach(([a,b],pi)=>{
+    const [ea,eb] = mode==='encrypt'?playfairEncryptPair(matrix,a,b):playfairDecryptPair(matrix,a,b);
+    result += ea+eb;
+    const [ra,ca]=findInMatrix(matrix,a),[rb,cb]=findInMatrix(matrix,b);
+    let rule = '';
+    if(ra===rb) rule=`Same row → shift ${mode==='encrypt'?'right':'left'}`;
+    else if(ca===cb) rule=`Same column → shift ${mode==='encrypt'?'down':'up'}`;
+    else rule='Rectangle rule → swap columns';
+
+    let html3 = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Pair <strong style="color:var(--accent3)">${a}${b}</strong> → <strong style="color:var(--accent2)">${ea}${eb}</strong></p>`;
+    html3 += `<div class="info-badge orange" style="margin-bottom:10px">${rule}</div>`;
+    html3 += '<div class="playfair-grid">';
+    matrix.forEach((c,i)=>{
+      const row=Math.floor(i/5),col=i%5;
+      let cls='pf-cell';
+      if(row===ra&&col===ca) cls+=' active';
+      else if(row===rb&&col===cb) cls+=' active2';
+      else if((ra===rb&&row===ra)||(ca===cb&&col===ca)) cls+=' pair';
+      html3+=`<div class="${cls}">${c}</div>`;
+    });
+    html3 += '</div>';
+    html3 += '<div class="digraph-display" style="margin-top:10px">';
+    pairs.forEach(([x,y],j)=>html3+=`<div class="digraph-pair ${j===pi?'active':''}">${j===pi?ea+eb:x+y}</div>`);
+    html3 += '</div>';
+    s.push({title:`${mode==='encrypt'?'Encrypt':'Decrypt'} pair "${a}${b}" → "${ea}${eb}"`, html:html3});
+  });
+
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Digraph Pairs</div><div class="output-text" style="color:var(--text);letter-spacing:3px">${pairs.map(([a,b])=>a+b).join(' ')}</div></div>
+    <div class="output-box"><div class="output-label">Ciphertext</div><div class="output-text">${result}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// HILL CIPHER
+// ============================================================
+function matMulMod26(A, v) {
+  return A.map(row => mod26(row.reduce((sum,val,j)=>sum+val*v[j],0)));
+}
+
+function det2(m) { return m[0][0]*m[1][1]-m[0][1]*m[1][0]; }
+
+function modInverse(a, m) {
+  a=((a%m)+m)%m;
+  for(let i=1;i<m;i++) if((a*i)%m===1) return i;
+  return -1;
+}
+
+function hillInverse2(m) {
+  const d = mod26(det2(m));
+  const inv = modInverse(d,26);
+  if(inv===-1) return null;
+  return [[mod26(inv*m[1][1]),mod26(-inv*m[0][1])],[mod26(-inv*m[1][0]),mod26(inv*m[0][0])]];
+}
+
+function det3(m) {
+  return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
+        -m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
+        +m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+}
+
+function hillInverse3(m) {
+  const d = mod26(det3(m));
+  const inv = modInverse(((d%26)+26)%26, 26);
+  if(inv===-1) return null;
+  // cofactor matrix
+  const cof = [];
+  for(let r=0;r<3;r++){cof.push([]);for(let c=0;c<3;c++){
+    const sub=m.filter((_,i)=>i!==r).map(row=>row.filter((_,j)=>j!==c));
+    cof[r].push(((r+c)%2===0?1:-1)*det2(sub));
+  }}
+  // transpose and scale
+  const adj = [[cof[0][0],cof[1][0],cof[2][0]],[cof[0][1],cof[1][1],cof[2][1]],[cof[0][2],cof[1][2],cof[2][2]]];
+  return adj.map(row=>row.map(v=>mod26(inv*v)));
+}
+
+function hillEncrypt(text, matrix) {
+  text = text.toUpperCase().replace(/[^A-Z]/g,'');
+  const n = matrix.length;
+  while(text.length%n!==0) text+='X';
+  let out='';
+  for(let i=0;i<text.length;i+=n){
+    const vec = text.slice(i,i+n).split('').map(l2n);
+    out+=matMulMod26(matrix,vec).map(n2l).join('');
+  }
+  return out;
+}
+
+function buildHillSteps(pt, matrix, mode) {
+  const n = matrix.length;
+  const s = [];
+  let text = pt.toUpperCase().replace(/[^A-Z]/g,'');
+  while(text.length%n!==0) text+='X';
+
+  const keyInv = n===2?hillInverse2(matrix):hillInverse3(matrix);
+  const workMatrix = mode==='encrypt'?matrix:keyInv;
+
+  // Step 1: Key matrix
+  let kHTML = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Key matrix used for multiplication:</p>';
+  kHTML += matrixToHTML(matrix, 'Key Matrix');
+  if(mode==='decrypt'&&keyInv){
+    kHTML += '<p style="font-size:12px;color:var(--text-dim);margin:10px 0 6px">Inverse matrix (mod 26) for decryption:</p>';
+    kHTML += matrixToHTML(keyInv, 'Inverse Key Matrix');
+  }
+  s.push({title:'Key Matrix', html:kHTML});
+
+  // Step 2: Letter to number
+  let lnHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Convert letters to numbers (A=0, B=1, ..., Z=25):</p>`;
+  lnHTML += '<div class="letter-num-row">';
+  text.split('').forEach((c,i)=>lnHTML+=`<div class="ln-item"><div class="ln-letter">${c}</div><div class="ln-num">${l2n(c)}</div></div>`);
+  lnHTML += '</div>';
+  s.push({title:'Convert Plaintext Letters to Numbers', html:lnHTML});
+
+  // Per-block
+  for(let i=0;i<text.length;i+=n){
+    const block = text.slice(i,i+n);
+    const vec = block.split('').map(l2n);
+    const res = matMulMod26(workMatrix,vec);
+    const outBlock = res.map(n2l).join('');
+
+    let html4 = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Block "${block}" → "${outBlock}"</p>`;
+    html4 += '<div class="matrix-mul-display">';
+    // Matrix
+    html4 += `<div><div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">Key Matrix</div><div class="mini-matrix" style="grid-template-columns:repeat(${n},36px)">`;
+    workMatrix.forEach(row=>row.forEach(v=>html4+=`<div class="mini-matrix-cell">${v}</div>`));
+    html4 += '</div></div>';
+    html4 += '<div class="op-symbol">×</div>';
+    // Vector
+    html4 += `<div><div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">Input</div><div class="mini-matrix" style="grid-template-columns:36px">`;
+    vec.forEach((v,j)=>html4+=`<div class="mini-matrix-cell highlight">${v}</div>`);
+    html4 += '</div></div><div class="op-symbol">=</div>';
+    // Intermediate
+    html4 += `<div><div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">×Sum</div><div class="mini-matrix" style="grid-template-columns:36px">`;
+    workMatrix.forEach(row=>{
+      const sum = row.reduce((acc,v,j)=>acc+v*vec[j],0);
+      html4+=`<div class="mini-matrix-cell">${sum}</div>`;
+    });
+    html4 += '</div></div><div class="op-symbol">mod 26 =</div>';
+    // Result
+    html4 += `<div><div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">Output</div><div class="mini-matrix" style="grid-template-columns:36px">`;
+    res.forEach(v=>html4+=`<div class="mini-matrix-cell highlight2">${v} (${n2l(v)})</div>`);
+    html4 += '</div></div></div>';
+    s.push({title:`${mode==='encrypt'?'Encrypt':'Decrypt'} block "${block}" → "${outBlock}"`, html:html4});
+  }
+
+  const enc = hillEncrypt(text, workMatrix);
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Input</div><div class="output-text" style="color:var(--text)">${text}</div></div>
+    <div class="output-box"><div class="output-label">Output</div><div class="output-text">${enc}</div></div>`});
+  return s;
+}
+
+function matrixToHTML(m, label='') {
+  let html = label?`<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">${label}</div>`:'';
+  html += `<table class="viz-table" style="width:auto;margin-bottom:10px">`;
+  m.forEach(row=>{
+    html+='<tr>';
+    row.forEach(v=>html+=`<td style="width:50px">${v}</td>`);
+    html+='</tr>';
+  });
+  html += '</table>';
+  return html;
+}
+
+// ============================================================
+// VIGENERE CIPHER
+// ============================================================
+function vigenereEncrypt(text, key) {
+  text = text.toUpperCase(); key = key.toUpperCase().replace(/[^A-Z]/g,'');
+  let out='', ki=0;
+  for(let c of text){
+    if(alpha.includes(c)){out+=n2l(l2n(c)+l2n(key[ki%key.length]));ki++;}
+    else out+=c;
+  }
+  return out;
+}
+function vigenereDecrypt(text, key) {
+  text = text.toUpperCase(); key = key.toUpperCase().replace(/[^A-Z]/g,'');
+  let out='', ki=0;
+  for(let c of text){
+    if(alpha.includes(c)){out+=n2l(l2n(c)-l2n(key[ki%key.length]));ki++;}
+    else out+=c;
+  }
+  return out;
+}
+
+function buildVigenereSteps(pt, keyword, mode) {
+  pt = pt.toUpperCase(); keyword = keyword.toUpperCase().replace(/[^A-Z]/g,'');
+  const s = [];
+  const letters = pt.split('').filter(c=>alpha.includes(c));
+
+  // Step 1: Key expansion
+  let keyExpanded = '', ki=0;
+  letters.forEach(()=>{keyExpanded+=keyword[ki%keyword.length];ki++;});
+  let keHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Keyword "<strong style="color:var(--accent)">${keyword}</strong>" is repeated to match plaintext length:</p>`;
+  keHTML += '<div class="key-row-display">';
+  letters.forEach((c,i)=>keHTML+=`<div class="kr-item"><div class="kr-plain">${c}</div><div class="kr-key">${keyExpanded[i]}</div></div>`);
+  keHTML += '</div><div style="margin-top:8px;font-size:11px;color:var(--text-dim)">Top row = plaintext, Bottom row = key</div>';
+  s.push({title:'Expand Keyword to Match Plaintext', html:keHTML});
+
+  // Step 2: Vigenere square (compact)
+  let vsHTML = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Vigenère Square — find intersection of plaintext row and key column:</p>';
+  vsHTML += '<div class="vig-table-wrap"><table class="vig-table"><tr><th></th>';
+  alpha.split('').forEach(c=>vsHTML+=`<th>${c}</th>`);
+  vsHTML += '</tr>';
+  alpha.split('').forEach((r,ri)=>{
+    vsHTML+=`<tr><td class="row-header">${r}</td>`;
+    alpha.split('').forEach((c,ci)=>vsHTML+=`<td>${alpha[(ri+ci)%26]}</td>`);
+    vsHTML+='</tr>';
+  });
+  vsHTML += '</table></div>';
+  s.push({title:'Vigenère Square', html:vsHTML});
+
+  // Per-letter
+  let ki2=0;
+  letters.forEach((c,i)=>{
+    const k=keyExpanded[i];
+    const ci=l2n(c), ki3=l2n(k);
+    const ri=mode==='encrypt'?mod26(ci+ki3):mod26(ci-ki3);
+    let html5 = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Plain: <strong style="color:var(--accent)">${c}</strong> + Key: <strong style="color:var(--accent2)">${k}</strong> = <strong style="color:var(--accent4)">${n2l(ri)}</strong></p>`;
+    html5 += `<div class="info-badge">${c}(${ci}) ${mode==='encrypt'?'+':'-'} ${k}(${ki3}) = ${mode==='encrypt'?ci+ki3:ci-ki3} mod 26 = ${ri} → ${n2l(ri)}</div>`;
+    // Mini vigenere highlight
+    html5 += '<div class="vig-table-wrap" style="max-height:200px"><table class="vig-table"><tr><th></th>';
+    alpha.split('').forEach((a,j)=>html5+=`<th ${j===ki3?'style="background:rgba(255,107,53,0.3);color:var(--accent2)"':''}>${a}</th>`);
+    html5 += '</tr>';
+    alpha.split('').forEach((row,rr)=>{
+      html5+=`<tr><td class="row-header" ${rr===ci?'style="background:rgba(0,212,255,0.3);color:var(--accent)"':''}>${row}</td>`;
+      alpha.split('').forEach((_,cc)=>{
+        const isRow=rr===ci, isCol=cc===ki3, isActive=rr===ci&&cc===ki3;
+        html5+=`<td class="${isActive?'vig-active':isRow?'vig-row':isCol?'vig-col':''}">${alpha[(rr+cc)%26]}</td>`;
+      });
+      html5+='</tr>';
+    });
+    html5 += '</table></div>';
+    s.push({title:`${mode==='encrypt'?'Encrypt':'Decrypt'} "${c}" with key "${k}" → "${n2l(ri)}"`, html:html5});
+  });
+
+  const result = mode==='encrypt'?vigenereEncrypt(pt,keyword):vigenereDecrypt(pt,keyword);
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Plaintext</div><div class="output-text" style="color:var(--text)">${pt}</div></div>
+    <div class="output-box"><div class="output-label">Key (expanded)</div><div class="output-text" style="color:var(--accent2)">${keyExpanded}</div></div>
+    <div class="output-box"><div class="output-label">Ciphertext</div><div class="output-text">${result}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// ONE-TIME PAD
+// ============================================================
+function otpEncrypt(text, key) {
+  text = text.toUpperCase(); key = key.toUpperCase();
+  let out='', ki=0;
+  for(let c of text){
+    if(alpha.includes(c)){out+=n2l(l2n(c)+l2n(key[ki]));ki++;}
+    else out+=c;
+  }
+  return out;
+}
+function otpDecrypt(text, key) {
+  text = text.toUpperCase(); key = key.toUpperCase();
+  let out='', ki=0;
+  for(let c of text){
+    if(alpha.includes(c)){out+=n2l(l2n(c)-l2n(key[ki]));ki++;}
+    else out+=c;
+  }
+  return out;
+}
+
+function buildOTPSteps(pt, key, mode) {
+  pt = pt.toUpperCase(); key = key.toUpperCase();
+  const letters = pt.split('').filter(c=>alpha.includes(c));
+  const s = [];
+
+  // Step 1
+  let kHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">A unique random key is used — each character is used exactly once:</p>
+    <div class="otp-key-display">${key}</div>
+    <div class="info-badge green" style="margin-top:8px">Key length = Plaintext length: ${letters.length} letters</div>
+    <div class="info-badge" style="margin-top:4px">Theoretically unbreakable if key is truly random and used only once</div>`;
+  s.push({title:'One-Time Key', html:kHTML});
+
+  // Step 2: letters to numbers
+  let lnHTML = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Convert both plaintext and key to numbers:</p>';
+  lnHTML += '<div style="margin-bottom:8px;font-size:11px;color:var(--accent)">Plaintext:</div><div class="letter-num-row">';
+  letters.forEach(c=>lnHTML+=`<div class="ln-item"><div class="ln-letter">${c}</div><div class="ln-num">${l2n(c)}</div></div>`);
+  lnHTML += '</div><div style="margin:8px 0 4px;font-size:11px;color:var(--accent2)">Key:</div><div class="letter-num-row">';
+  key.split('').slice(0,letters.length).forEach(c=>lnHTML+=`<div class="ln-item"><div class="ln-letter" style="border-color:var(--accent2);color:var(--accent2)">${c}</div><div class="ln-num">${l2n(c)}</div></div>`);
+  lnHTML += '</div>';
+  s.push({title:'Convert Letters to Numbers', html:lnHTML});
+
+  // Per-letter
+  letters.forEach((c,i)=>{
+    const k=key[i], ci2=l2n(c), ki4=l2n(k);
+    const ri=mod26(mode==='encrypt'?ci2+ki4:ci2-ki4);
+    let html6 = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">
+      <strong style="color:var(--accent)">${c}</strong>(${ci2}) ${mode==='encrypt'?'+':'-'} <strong style="color:var(--accent2)">${k}</strong>(${ki4}) = ${mode==='encrypt'?ci2+ki4:ci2-ki4} mod 26 = ${ri} → <strong style="color:var(--accent4)">${n2l(ri)}</strong>
+    </p>`;
+    html6 += `<div class="info-badge">${c} ${mode==='encrypt'?'+':'-'} ${k} mod 26 = ${n2l(ri)}</div>`;
+    html6 += '<div class="letter-num-row" style="margin-top:12px">';
+    letters.forEach((lc,j)=>{
+      const lk=key[j], lr=mod26(mode==='encrypt'?l2n(lc)+l2n(lk):l2n(lc)-l2n(lk));
+      html6+=`<div class="ln-item ${j===i?'active':''}"><div class="ln-letter">${j<i?n2l(lr):j===i?n2l(ri):lc}</div><div class="ln-num">${j<=i?lr:''}</div></div>`;
+    });
+    html6 += '</div>';
+    s.push({title:`${mode==='encrypt'?'Encrypt':'Decrypt'} "${c}" with key "${k}" → "${n2l(ri)}"`, html:html6});
+  });
+
+  const result = mode==='encrypt'?otpEncrypt(pt,key):otpDecrypt(pt,key);
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Plaintext</div><div class="output-text" style="color:var(--text)">${letters.join('')}</div></div>
+    <div class="output-box"><div class="output-label">Key Used</div><div class="output-text" style="color:var(--accent2)">${key.slice(0,letters.length)}</div></div>
+    <div class="output-box"><div class="output-label">Ciphertext</div><div class="output-text">${result}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// RAIL FENCE CIPHER
+// ============================================================
+function railFenceEncrypt(text, rails) {
+  text = text.toUpperCase().replace(/[^A-Z]/g,'');
+  const fence = Array.from({length:rails},()=>[]);
+  let r=0, dir=1;
+  for(let c of text){
+    fence[r].push(c);
+    if(r===0) dir=1;
+    if(r===rails-1) dir=-1;
+    r+=dir;
+  }
+  return fence.flat().join('');
+}
+
+function railFenceDecrypt(text, rails) {
+  const n = text.length;
+  // Find lengths per rail
+  const pos = [];
+  let r=0, dir=1;
+  for(let i=0;i<n;i++){
+    pos.push(r);
+    if(r===0) dir=1;
+    if(r===rails-1) dir=-1;
+    r+=dir;
+  }
+  const counts = Array(rails).fill(0);
+  pos.forEach(p=>counts[p]++);
+  const rails_arr = [];
+  let idx=0;
+  for(let i=0;i<rails;i++){rails_arr.push(text.slice(idx,idx+counts[i]));idx+=counts[i];}
+  const ptrs = Array(rails).fill(0);
+  let out='';
+  for(let i=0;i<n;i++){const p=pos[i];out+=rails_arr[p][ptrs[p]++];}
+  return out;
+}
+
+function buildRailFenceSteps(pt, rails, mode) {
+  pt = pt.toUpperCase().replace(/[^A-Z]/g,'');
+  const s = [];
+  const text = mode==='encrypt'?pt:pt;
+
+  // Build rail positions
+  const positions = [];
+  let r=0, dir=1;
+  for(let c of text){
+    positions.push(r);
+    if(r===0) dir=1;
+    if(r===rails-1) dir=-1;
+    r+=dir;
+  }
+
+  const railColors = ['r0','r1','r2','r3'];
+
+  // Step 1: Place on zig-zag
+  let zgHTML = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Characters placed in zig-zag pattern across rails:</p><div class="rail-grid">';
+  for(let ri=0;ri<rails;ri++){
+    zgHTML+='<div class="rail-row">';
+    for(let ci=0;ci<text.length;ci++){
+      if(positions[ci]===ri) zgHTML+=`<div class="rail-cell ${railColors[ri%4]}">${text[ci]}</div>`;
+      else zgHTML+=`<div class="rail-cell empty">·</div>`;
+    }
+    zgHTML+='</div>';
+  }
+  zgHTML += '</div>';
+  s.push({title:'Place Characters on Rails (Zig-Zag)', html:zgHTML});
+
+  // Per-rail reading
+  const railGroups = Array.from({length:rails},(_,ri)=>text.split('').filter((_,i)=>positions[i]===ri));
+  railGroups.forEach((group,ri)=>{
+    let html7=`<p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Reading Rail ${ri+1}:</p>`;
+    html7+='<div class="rail-grid">';
+    for(let rr=0;rr<rails;rr++){
+      html7+='<div class="rail-row">';
+      let gi=0;
+      for(let ci=0;ci<text.length;ci++){
+        if(positions[ci]===rr){
+          html7+=`<div class="rail-cell ${rr===ri?'active':railColors[rr%4]}">${text[ci]}</div>`;
+        } else html7+=`<div class="rail-cell empty">·</div>`;
+      }
+      html7+='</div>';
+    }
+    html7+='</div>';
+    html7+=`<div class="info-badge ${['','orange',''][ri%3]||''}" style="margin-top:8px">Rail ${ri+1}: ${group.join(' ')}</div>`;
+    s.push({title:`Read Rail ${ri+1}: "${group.join('')}"`, html:html7});
+  });
+
+  const enc = mode==='encrypt'?railFenceEncrypt(text,rails):railFenceDecrypt(text,rails);
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Plaintext</div><div class="output-text" style="color:var(--text)">${text}</div></div>
+    <div class="output-box"><div class="output-label">Ciphertext</div><div class="output-text">${enc}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// COLUMNAR TRANSPOSITION
+// ============================================================
+function columnarEncrypt(text, keyword) {
+  text = text.toUpperCase().replace(/[^A-Z]/g,'');
+  keyword = keyword.toUpperCase().replace(/[^A-Z]/g,'');
+  const n = keyword.length;
+  while(text.length%n!==0) text+='X';
+  const rows = Math.floor(text.length/n);
+  const grid = [];
+  for(let i=0;i<rows;i++) grid.push(text.slice(i*n,(i+1)*n).split(''));
+  const order = keyword.split('').map((c,i)=>({c,i})).sort((a,b)=>a.c<b.c?-1:a.c>b.c?1:0).map(x=>x.i);
+  return order.map(ci=>grid.map(row=>row[ci]).join('')).join('');
+}
+
+function columnarDecrypt(text, keyword) {
+  keyword = keyword.toUpperCase().replace(/[^A-Z]/g,'');
+  const n = keyword.length;
+  const rows = Math.floor(text.length/n);
+  const order = keyword.split('').map((c,i)=>({c,i})).sort((a,b)=>a.c<b.c?-1:a.c>b.c?1:0).map(x=>x.i);
+  const cols = [];
+  let idx=0;
+  for(let col of order){cols.push({col,chars:text.slice(idx,idx+rows).split('')});idx+=rows;}
+  const grid = Array.from({length:rows},()=>Array(n).fill(''));
+  cols.forEach(({col,chars})=>chars.forEach((c,r)=>grid[r][col]=c));
+  return grid.map(row=>row.join('')).join('');
+}
+
+function buildColumnarSteps(pt, keyword, mode) {
+  pt = pt.toUpperCase().replace(/[^A-Z]/g,'');
+  keyword = keyword.toUpperCase().replace(/[^A-Z]/g,'');
+  const n = keyword.length;
+  while(pt.length%n!==0) pt+='X';
+  const rows = Math.floor(pt.length/n);
+  const s = [];
+
+  // Step 1: Fill grid
+  const grid = [];
+  for(let i=0;i<rows;i++) grid.push(pt.slice(i*n,(i+1)*n).split(''));
+
+  const order = keyword.split('').map((c,i)=>({c,i})).sort((a,b)=>a.c<b.c?-1:a.c>b.c?1:0).map(x=>x.i);
+
+  let gHTML = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Plaintext arranged in grid under keyword:</p>';
+  gHTML += `<div class="col-grid" style="grid-template-columns:repeat(${n},36px)">`;
+  keyword.split('').forEach((c,i)=>gHTML+=`<div class="col-cell header">${c}<div style="font-size:9px;color:var(--accent)">${i+1}</div></div>`);
+  grid.forEach(row=>row.forEach(c=>gHTML+=`<div class="col-cell">${c}</div>`));
+  gHTML += '</div>';
+  s.push({title:'Fill Grid with Plaintext', html:gHTML});
+
+  // Step 2: Sorted order
+  let soHTML = '<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Keyword columns sorted alphabetically — this determines reading order:</p>';
+  soHTML += '<div class="letter-num-row" style="margin-bottom:10px">';
+  keyword.split('').forEach((c,i)=>soHTML+=`<div class="ln-item"><div class="ln-letter" style="color:var(--accent)">${c}</div><div class="ln-num">col ${i+1}</div></div>`);
+  soHTML += '</div>';
+  soHTML += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Reading order:</div>';
+  soHTML += '<div class="letter-num-row">';
+  order.forEach((ci,rank)=>soHTML+=`<div class="ln-item"><div class="ln-letter" style="color:var(--accent2)">${keyword[ci]}</div><div class="ln-num">rank ${rank+1}</div></div>`);
+  soHTML += '</div>';
+  s.push({title:'Determine Column Reading Order', html:soHTML});
+
+  // Per-column
+  order.forEach((ci,rank)=>{
+    const col = grid.map(row=>row[ci]).join('');
+    let html8=`<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Reading column ${ci+1} (keyword letter "<strong style="color:var(--accent)">${keyword[ci]}</strong>", rank ${rank+1}):</p>`;
+    html8+=`<div class="col-grid" style="grid-template-columns:repeat(${n},36px)">`;
+    keyword.split('').forEach((c,j)=>html8+=`<div class="col-cell header ${j===ci?'active-col':''}">${c}</div>`);
+    grid.forEach(row=>row.forEach((c,j)=>html8+=`<div class="col-cell ${j===ci?'reading':''}">${c}</div>`));
+    html8+=`</div><div class="info-badge orange" style="margin-top:8px">Column reads: "${col}"</div>`;
+    s.push({title:`Read Column ${rank+1} (col ${ci+1}: "${keyword[ci]}") → "${col}"`, html:html8});
+  });
+
+  const enc = mode==='encrypt'?columnarEncrypt(pt,keyword):columnarDecrypt(pt,keyword);
+  s.push({title:'Final Result',html:`
+    <div class="output-box"><div class="output-label">Plaintext Grid</div><div class="output-text" style="color:var(--text)">${grid.map(r=>r.join('')).join(' ')}</div></div>
+    <div class="output-box"><div class="output-label">Column Order</div><div class="output-text" style="color:var(--accent2)">${order.map(i=>keyword[i]).join('')}</div></div>
+    <div class="output-box"><div class="output-label">Ciphertext</div><div class="output-text">${enc}</div></div>`});
+  return s;
+}
+
+// ============================================================
+// ENCRYPT / DECRYPT DISPATCH
+// ============================================================
+function doEncrypt() { processInput('encrypt'); }
+function doDecrypt() { processInput('decrypt'); }
+
+function processInput(mode) {
+  clearError();
+  stopAutoplay();
+  const pt = document.getElementById('in-plaintext')?.value?.trim() || '';
+  if (!pt) { showError('Please enter a plaintext message.'); return; }
+
+  try {
+    let ciphertext, decrypted, vizSteps;
+
+    switch(currentCipher) {
+      case 'caesar': {
+        const shift = parseInt(document.getElementById('in-shift').value);
+        if (isNaN(shift)||shift<1||shift>25) { showError('Shift key must be between 1 and 25.'); return; }
+        ciphertext = mode==='encrypt'?caesarEncrypt(pt,shift):caesarDecrypt(pt,shift);
+        decrypted = mode==='encrypt'?caesarDecrypt(ciphertext,shift):caesarEncrypt(ciphertext,shift);
+        vizSteps = buildCaesarSteps(mode==='encrypt'?pt:pt, shift, mode);
+        break;
+      }
+      case 'mono': {
+        const key = (document.getElementById('in-monokey').value||'').toUpperCase().replace(/[^A-Z]/g,'');
+        if (key.length!==26) { showError('Substitution key must be exactly 26 letters.'); return; }
+        if (new Set(key).size!==26) { showError('Substitution key must contain all 26 unique letters.'); return; }
+        ciphertext = mode==='encrypt'?monoEncrypt(pt,key):monoDecrypt(pt,key);
+        decrypted = mode==='encrypt'?monoDecrypt(ciphertext,key):monoEncrypt(ciphertext,key);
+        vizSteps = buildMonoSteps(mode==='encrypt'?pt:pt, key, mode);
+        break;
+      }
+      case 'playfair': {
+        const kw = (document.getElementById('in-keyword').value||'').replace(/[^a-zA-Z]/g,'');
+        if (!kw) { showError('Please enter a keyword.'); return; }
+        const pairs = playfairPrepare(pt);
+        const matrix = buildPlayfairMatrix(kw);
+        ciphertext = mode==='encrypt'
+          ? pairs.map(([a,b])=>playfairEncryptPair(matrix,a,b).join('')).join('')
+          : pairs.map(([a,b])=>playfairDecryptPair(matrix,a,b).join('')).join('');
+        decrypted = mode==='encrypt'
+          ? playfairPrepare(ciphertext).map(([a,b])=>playfairDecryptPair(matrix,a,b).join('')).join('')
+          : playfairPrepare(ciphertext).map(([a,b])=>playfairEncryptPair(matrix,a,b).join('')).join('');
+        vizSteps = buildPlayfairSteps(pt, kw, mode);
+        break;
+      }
+      case 'hill': {
+        const matrix = getHillMatrix();
+        if (!matrix) { showError('Invalid matrix values.'); return; }
+        const inv = hillSize===2?hillInverse2(matrix):hillInverse3(matrix);
+        if (!inv&&mode==='decrypt') { showError('Matrix is not invertible mod 26. Choose a different key matrix.'); return; }
+        if (!inv) { showError('Warning: This matrix has no inverse mod 26 — decryption will be impossible. Encrypting anyway.'); }
+        ciphertext = mode==='encrypt'?hillEncrypt(pt,matrix):hillEncrypt(pt,inv||matrix);
+        decrypted = mode==='encrypt'?(inv?hillEncrypt(ciphertext,inv):'N/A (non-invertible)'):hillEncrypt(ciphertext,matrix);
+        vizSteps = buildHillSteps(pt, matrix, mode);
+        break;
+      }
+      case 'vigenere': {
+        const kw2 = (document.getElementById('in-keyword').value||'').replace(/[^a-zA-Z]/g,'');
+        if (!kw2) { showError('Please enter a keyword.'); return; }
+        ciphertext = mode==='encrypt'?vigenereEncrypt(pt,kw2):vigenereDecrypt(pt,kw2);
+        decrypted = mode==='encrypt'?vigenereDecrypt(ciphertext,kw2):vigenereEncrypt(ciphertext,kw2);
+        vizSteps = buildVigenereSteps(pt, kw2, mode);
+        break;
+      }
+      case 'otp': {
+        const key = otpKey;
+        const letters = pt.replace(/[^a-zA-Z]/g,'');
+        if (!key||key.length<letters.length) { showError('Key too short. Click Regenerate Key.'); return; }
+        ciphertext = mode==='encrypt'?otpEncrypt(pt,key):otpDecrypt(pt,key);
+        decrypted = mode==='encrypt'?otpDecrypt(ciphertext,key):otpEncrypt(ciphertext,key);
+        vizSteps = buildOTPSteps(pt, key, mode);
+        break;
+      }
+      case 'railfence': {
+        const rails = parseInt(document.getElementById('in-rails').value);
+        if (isNaN(rails)||rails<2||rails>6) { showError('Number of rails must be between 2 and 6.'); return; }
+        ciphertext = mode==='encrypt'?railFenceEncrypt(pt,rails):railFenceDecrypt(pt,rails);
+        decrypted = mode==='encrypt'?railFenceDecrypt(ciphertext,rails):railFenceEncrypt(ciphertext,rails);
+        vizSteps = buildRailFenceSteps(mode==='encrypt'?pt:pt, rails, mode);
+        break;
+      }
+      case 'columnar': {
+        const kw3 = (document.getElementById('in-keyword').value||'').replace(/[^a-zA-Z]/g,'');
+        if (!kw3) { showError('Please enter a keyword.'); return; }
+        ciphertext = mode==='encrypt'?columnarEncrypt(pt,kw3):columnarDecrypt(pt,kw3);
+        decrypted = mode==='encrypt'?columnarDecrypt(ciphertext,kw3):columnarEncrypt(ciphertext,kw3);
+        vizSteps = buildColumnarSteps(mode==='encrypt'?pt:pt, kw3, mode);
+        break;
+      }
+    }
+
+    showOutput(ciphertext, decrypted);
+    setSteps(vizSteps);
+
+  } catch(e) {
+    showError('Error: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.getElementById('cipher-inputs').innerHTML = CIPHER_INPUTS['caesar'];
+</script>
+</body>
+</html>
